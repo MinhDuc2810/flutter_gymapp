@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/providers/auth_provider.dart';
+import './dashboard_screen.dart';
 
 class AdminhomeScreen extends StatelessWidget {
   @override
@@ -75,31 +76,20 @@ class AdminhomeScreen extends StatelessWidget {
             ListTile(
               title: Text('User Management'),
               onTap: () {
-                Navigator.pushNamed(context, '/schedulerequest');
+                Navigator.pushNamed(context, '/usermanagement');
               },
             ),
             ListTile(
               title: Text('Card Management'),
               onTap: () {
-                Navigator.pushNamed(context, '/schedulerequest');
+                Navigator.pushNamed(context, '/cardmanagement');
               },
             ),
             
           ],
         ),
       ),
-      body: Center(
-        child: userData == null
-            ? CircularProgressIndicator()
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('Welcome, ${userData.username}'),
-                  SizedBox(height: 20),
-                  Text('Email: ${userData.email}'),
-                ],
-              ),
-      ),
+      body: RevenueDashboardScreen(),
     );
   }
 }

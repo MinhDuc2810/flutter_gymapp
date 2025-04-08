@@ -12,6 +12,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  OverlayEntry? _overlayEntry;
+  bool _isNotificationOpen = false;
 
   @override
   void initState() {
@@ -25,7 +27,84 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void dispose() {
     _tabController.dispose();
+    _overlayEntry?.remove();
     super.dispose();
+  }
+
+  void _toggleNotificationDropdown(BuildContext context) {
+    if (_isNotificationOpen) {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
+      _isNotificationOpen = false;
+    } else {
+      _overlayEntry = _createOverlayEntry(context);
+      Overlay.of(context).insert(_overlayEntry!);
+      _isNotificationOpen = true;
+    }
+    setState(() {});
+  }
+
+  OverlayEntry _createOverlayEntry(BuildContext context) {
+    RenderBox renderBox = context.findRenderObject() as RenderBox;
+    var offset = renderBox.localToGlobal(Offset.zero);
+
+    return OverlayEntry(
+      builder: (context) => GestureDetector(
+        onTap: () {
+          _toggleNotificationDropdown(context); // Đóng khi nhấn ra ngoài
+        },
+        behavior: HitTestBehavior.translucent,
+        child: Stack(
+          children: [
+            Positioned(
+              top: offset.dy + 56.0, // Đặt ngay dưới AppBar (56 là chiều cao mặc định của AppBar)
+              right: 10.0, // Căn lề phải để khớp với nút thông báo
+              width: 250, // Chiều rộng của dropdown
+              child: Material(
+                elevation: 4.0,
+                borderRadius: BorderRadius.circular(8.0),
+                child: Container(
+                  padding: EdgeInsets.all(10.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Notifications',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Divider(),
+                      // Ví dụ danh sách thông báo
+                      ListTile(
+                        title: Text('New message received'),
+                        subtitle: Text('5 minutes ago'),
+                        leading: Icon(Icons.message, color: Colors.blue),
+                      ),
+                      ListTile(
+                        title: Text('Workout reminder'),
+                        subtitle: Text('10 minutes ago'),
+                        leading: Icon(Icons.fitness_center, color: Colors.blue),
+                      ),
+                      ListTile(
+                        title: Text('Payment successful'),
+                        subtitle: Text('1 hour ago'),
+                        leading: Icon(Icons.payment, color: Colors.blue),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -57,11 +136,52 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           },
         ),
         actions: [
+          // Nút thông báo với dropdown
           IconButton(
-            icon: Icon(Icons.shopping_cart, color: Colors.white),
-            onPressed: () {},
+            icon: Stack(
+              children: [
+                Icon(Icons.notifications, color: Colors.white),
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    padding: EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      '3', // Số lượng thông báo (có thể thay bằng biến động)
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            onPressed: () {
+              _toggleNotificationDropdown(context); // Hiển thị/ẩn dropdown
+            },
             splashColor: Colors.white30,
             highlightColor: Colors.white10,
+            tooltip: 'Notifications',
+          ),
+          // Nút giỏ hàng
+          IconButton(
+            icon: Icon(Icons.shopping_cart, color: Colors.white),
+            onPressed: () {
+              Navigator.pushNamed(context, '/cart');
+            },
+            splashColor: Colors.white30,
+            highlightColor: Colors.white10,
+            tooltip: 'Cart',
           ),
         ],
         bottom: TabBar(
@@ -119,6 +239,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               icon: Icons.schedule,
               title: 'Schedule Request',
               route: '/schedulerequest',
+            ),
+            _buildDrawerItem(
+              context: context,
+              icon: Icons.work,
+              title: 'Workout Tracker',
+              route: '/workouttracker',
             ),
             ListTile(
               leading: Icon(Icons.logout),
