@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/services/adminapi_service.dart';
+import 'package:intl/intl.dart';
 
 class PTDetailScreen extends StatelessWidget {
   const PTDetailScreen({Key? key}) : super(key: key);
@@ -93,7 +94,7 @@ class PTDetailScreen extends StatelessWidget {
                           style: const TextStyle(fontSize: 16)),
                       Text('Phonenumber: ${pt["user"]["phonenumber"]}',
                           style: const TextStyle(fontSize: 16)),
-                      Text('Birthday: ${pt["user"]["birthday"]}',
+                      Text('Birthday: ${pt["user"]["birthday"] != null ? DateFormat( 'dd/MM/yyyy').format(DateTime.parse(pt["user"]["birthday"])) : ''}',
                           style: const TextStyle(fontSize: 16)),
                       Text('Gender: ${pt["profile"]["gender"]}',
                           style: const TextStyle(fontSize: 16)),

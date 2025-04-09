@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class AdminapiService {
-  static String apiUrl = "http://192.168.1.9:3000"; // URL gốc của API
+  static String apiUrl = "http://192.168.1.4:3000"; // URL gốc của API
 
   // Phương thức để xây dựng URL đầy đủ từ apiUrl và endpoint
   static String _getFullUrl(String endpoint) {
@@ -176,6 +176,58 @@ static Future<Map<String, dynamic>> deletePt(String ptId) async {
       throw Exception('Lỗi kết nối server: $e');
     }
   }
+
+  // API lấy danh sách người dùng
+  static Future<List<Map<String, dynamic>>> getAllUsers(String token) async {
+    final url = _getFullUrl('/admin/getAllUsers');
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token', // Thêm token vào header
+          'Content-Type': 'application/json', // Tùy chọn, để đảm bảo định dạng
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return List<Map<String, dynamic>>.from(data);
+      } else {
+        throw Exception('Failed to load user list: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Server connection error: $e');
+    }
+  }
+
+  //API lấy thông tin thẻ tập ng dùng
+  Future<List<Map<String, dynamic>>> getAllCardMembers() async {
+  try {
+    final url = _getFullUrl('/admin/getAllCardMembers'); // Giả định endpoint là '/card-members', bạn có thể thay đổi nếu khác
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((item) => {
+        // Mapping chính xác theo cấu trúc response
+        'user': {
+          'username': item['user']['username'],
+          'phonenumber': item['user']['phonenumber'],
+        },
+        'cardMember': {
+          'id': item['cardMember']['id'],
+          'status': item['cardMember']['status'],
+          'packageId': item['cardMember']['packageId'],
+          'startDate': item['cardMember']['startDate'],
+          'endDate': item['cardMember']['endDate'],
+        }
+      }).toList();
+    } else {
+      throw Exception('Failed to load card members: ${response.statusCode}');
+    }
+  } catch (e) {
+    throw Exception('Error fetching card members: $e');
+  }
+}
 
 
 }

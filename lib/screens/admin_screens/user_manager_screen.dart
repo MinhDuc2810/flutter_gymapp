@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/providers/auth_provider.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_application_1/services/adminapi_service.dart';
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({Key? key}) : super(key: key);
@@ -8,34 +12,7 @@ class UserManagementScreen extends StatefulWidget {
 }
 
 class _UserManagementScreenState extends State<UserManagementScreen> {
-  // Dữ liệu người dùng mẫu
-  List<Map<String, dynamic>> userList = [
-    {
-      "_id": "user001",
-      "username": "nguyen_van_a",
-      "email": "nguyenvana@gmail.com",
-      "avatarUrl": "/avatars/user001.jpg",
-    },
-    {
-      "_id": "user002",
-      "username": "tran_thi_b",
-      "email": "tranthib@gmail.com",
-      "avatarUrl": "/avatars/user002.jpg",
-    },
-    {
-      "_id": "user003",
-      "username": "le_van_c",
-      "email": "levanc@gmail.com",
-      "avatarUrl": null, // Không có avatar
-    },
-    {
-      "_id": "user004",
-      "username": "pham_thi_d",
-      "email": null, // Không có email
-      "avatarUrl": "/avatars/user004.jpg",
-    },
-  ];
-
+  List<Map<String, dynamic>> userList = [];
   List<Map<String, dynamic>> filteredUserList = [];
   TextEditingController searchController = TextEditingController();
   bool isLoading = false;
@@ -43,23 +20,56 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   @override
   void initState() {
     super.initState();
-    // Khởi tạo danh sách ban đầu
-    setState(() {
-      filteredUserList = List.from(userList);
-    });
+    fetchUsers(); // Gọi API khi khởi tạo
     searchController.addListener(() {
       filterUserList();
     });
   }
 
-  // Hàm làm mới danh sách
-  void refreshUserList() {
+  // Hàm lấy dữ liệu từ API qua AdminApiService
+  Future<void> fetchUsers() async {
     setState(() {
-      filteredUserList = List.from(userList);
-      searchController.clear();
+      isLoading = true;
     });
+
+    // Lấy token từ AuthProvider
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final token = authProvider.token;
+
+    if (token == null) {
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng đăng nhập để tiếp tục'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final users = await AdminapiService.getAllUsers(token);
+      setState(() {
+        userList = users;
+        filteredUserList = List.from(userList);
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lỗi khi tải danh sách người dùng: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
+  // Hàm lọc danh sách theo tìm kiếm
   void filterUserList() {
     String query = searchController.text.toLowerCase();
     setState(() {
@@ -95,13 +105,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             Navigator.pop(context);
           },
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: refreshUserList,
-            tooltip: 'Làm mới danh sách',
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -136,9 +139,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                             child: ListTile(
                               leading: CircleAvatar(
-                                backgroundImage: user["avatarUrl"] != null
-                                    ? NetworkImage('http://192.168.1.9:3000${user["avatarUrl"]}')
-                                    : const NetworkImage('http://192.168.1.9:3000/avatars/default-avatar.png'),
+                                backgroundImage: 
+                                AssetImage('assets/info.png'),
                               ),
                               title: Text(
                                 user["username"],
@@ -149,17 +151,17 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                 children: [
                                   Text('ID: ${user["_id"]}'),
                                   Text('Email: ${user["email"] ?? "Chưa có"}'),
+                                  Text('Phone Number: ${user["phonenumber"] ?? "Chưa có"}'),
+                                  Text('Ngày sinh: ${user["birthday"] != null ? DateFormat('dd/MM/yyyy').format(DateTime.parse(user["birthday"])) : "Không có"}'),
                                 ],
                               ),
                               onTap: () async {
-                                // Điều hướng đến UserDetailScreen và chờ kết quả
                                 final result = await Navigator.pushNamed(
                                   context,
                                   '/userdetail',
                                   arguments: user,
                                 );
 
-                                // Nếu xóa thành công, cập nhật danh sách và hiển thị thông báo
                                 if (result == true) {
                                   setState(() {
                                     userList.removeWhere((u) => u["_id"] == user["_id"]);

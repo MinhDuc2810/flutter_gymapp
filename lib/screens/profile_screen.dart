@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/providers/auth_provider.dart';
+import 'package:flutter_application_1/screens/user_screens/cardmember.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_application_1/services/api_service.dart';
 
 class ProfileScreen extends StatelessWidget {
   @override
@@ -49,60 +51,58 @@ class ProfileScreen extends StatelessWidget {
           ),
           SizedBox(height: 10),
           Text(
-            userData?.username ?? 'Guest',
+            userData?.username ?? 'Khách',
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 20),
           ProfileMenuItem(
             icon: Icons.person,
-            text: 'Edit Profile',
+            text: 'Sửa Hồ Sơ',
             onTap: () {
-              print('Tapped Edit Profile');
+              print('Nhấn Sửa Hồ Sơ');
               Navigator.pushNamed(context, '/editprofile');
             },
           ),
           ProfileMenuItem(
             icon: Icons.credit_card,
-            text: 'My Card',
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: Text('My Card'),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.credit_card, size: 50, color: Colors.black),
-                        SizedBox(height: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Card Number: **** **** **** 1234'),
-                            Text('Start Date: 12/25'),
-                            Text('Expiry Date: 12/25'),
-                            Text('Card Holder: ${userData?.username ?? 'Unknown'}'),
-                            
-                          ],
-                        ),
-                      ],
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text('Close'),
-                      ),
-                    ],
+            text: 'Thẻ Của Tôi',
+            onTap: () async {
+              try {
+                final userId = userData?.id ?? '';
+                if (userId.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Không tìm thấy ID người dùng')),
                   );
-                },
-              );
+                  return;
+                }
+                final cardData = await ApiService.getCardMember(userId);
+                if (cardData['success']) {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return CardDialog(
+                        cardData: cardData,
+                        username: userData?.username ?? 'Không rõ',
+                      );
+                    },
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(cardData['message'])),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Lỗi khi tải thẻ: $e')),
+                );
+              }
             },
           ),
           ProfileMenuItem(
             icon: Icons.lock,
-            text: 'Change Password',
+            text: 'Đổi Mật Khẩu',
             onTap: () {
-              print('Tapped Change Password');
+              print('Nhấn Đổi Mật Khẩu');
               Navigator.pushNamed(context, '/changepassword');
             },
           ),

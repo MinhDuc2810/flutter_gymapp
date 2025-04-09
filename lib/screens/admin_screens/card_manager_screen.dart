@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter_application_1/services/adminapi_service.dart';
 
 class CardManagementScreen extends StatefulWidget {
   const CardManagementScreen({Key? key}) : super(key: key);
@@ -8,69 +10,50 @@ class CardManagementScreen extends StatefulWidget {
 }
 
 class _CardManagementScreenState extends State<CardManagementScreen> {
-  // Dữ liệu thẻ mẫu
-  List<Map<String, dynamic>> cardList = [
-    {
-      "_id": "card001",
-      "cardNumber": "1234 5678 9012 3456",
-      "cardHolder": "Nguyen Van A",
-      "expiryDate": "12/25",
-      "cardType": "Visa",
-    },
-    {
-      "_id": "card002",
-      "cardNumber": "9876 5432 1098 7654",
-      "cardHolder": "Tran Thi B",
-      "expiryDate": "06/26",
-      "cardType": "MasterCard",
-    },
-    {
-      "_id": "card003",
-      "cardNumber": "4567 8901 2345 6789",
-      "cardHolder": "Le Van C",
-      "expiryDate": "03/24",
-      "cardType": "Visa",
-    },
-    {
-      "_id": "card004",
-      "cardNumber": "3210 9876 5432 1098",
-      "cardHolder": "Pham Thi D",
-      "expiryDate": "09/25",
-      "cardType": "MasterCard",
-    },
-  ];
-
+  List<Map<String, dynamic>> cardList = [];
   List<Map<String, dynamic>> filteredCardList = [];
   TextEditingController searchController = TextEditingController();
-  bool isLoading = false;
+  bool isLoading = true;
+  final AdminapiService _cardMemberService = AdminapiService();
 
   @override
   void initState() {
     super.initState();
-    // Khởi tạo danh sách ban đầu
-    setState(() {
-      filteredCardList = List.from(cardList);
-    });
+    fetchCardMembers();
     searchController.addListener(() {
       filterCardList();
     });
   }
 
-  // Hàm làm mới danh sách
+  Future<void> fetchCardMembers() async {
+    try {
+      setState(() => isLoading = true);
+      final cards = await _cardMemberService.getAllCardMembers();
+      setState(() {
+        cardList = cards;
+        filteredCardList = List.from(cardList);
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi tải dữ liệu: $e')),
+      );
+    }
+  }
+
   void refreshCardList() {
-    setState(() {
-      filteredCardList = List.from(cardList);
-      searchController.clear();
-    });
+    fetchCardMembers();
+    searchController.clear();
   }
 
   void filterCardList() {
     String query = searchController.text.toLowerCase();
     setState(() {
       filteredCardList = cardList.where((card) {
-        String cardNumber = card["cardNumber"].toLowerCase();
-        String cardHolder = card["cardHolder"].toLowerCase();
-        return cardNumber.contains(query) || cardHolder.contains(query);
+        String username = card['user']['username'].toLowerCase();
+        String phonenumber = card['user']['phonenumber'].toLowerCase();
+        return username.contains(query) || phonenumber.contains(query);
       }).toList();
     });
   }
@@ -79,6 +62,20 @@ class _CardManagementScreenState extends State<CardManagementScreen> {
   void dispose() {
     searchController.dispose();
     super.dispose();
+  }
+
+  // Hàm để lấy màu dựa trên trạng thái
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return Colors.green;
+      case 'inactive':
+        return Colors.grey;
+      case 'expired':
+        return Colors.red;
+      default:
+        return Colors.black; // Màu mặc định nếu trạng thái không khớp
+    }
   }
 
   @override
@@ -96,9 +93,7 @@ class _CardManagementScreenState extends State<CardManagementScreen> {
         backgroundColor: Colors.blue,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
@@ -115,7 +110,7 @@ class _CardManagementScreenState extends State<CardManagementScreen> {
             child: TextField(
               controller: searchController,
               decoration: InputDecoration(
-                hintText: 'Tìm kiếm thẻ theo số hoặc tên chủ thẻ...',
+                hintText: 'Tìm kiếm theo tên hoặc số điện thoại...',
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -138,39 +133,111 @@ class _CardManagementScreenState extends State<CardManagementScreen> {
                         itemBuilder: (context, index) {
                           final card = filteredCardList[index];
                           return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
                             child: ListTile(
-                              leading: Icon(
-                                card["cardType"] == "Visa"
-                                    ? Icons.credit_card
-                                    : Icons.payment,
+                              leading: const Icon(
+                                Icons.credit_card,
                                 color: Colors.blue,
                                 size: 30,
                               ),
                               title: Text(
-                                card["cardNumber"],
+                                card['user']['username'],
                                 style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Chủ thẻ: ${card["cardHolder"]}'),
-                                  Text('Hết hạn: ${card["expiryDate"]}'),
-                                  Text('Loại thẻ: ${card["cardType"]}'),
+                                  Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        const TextSpan(
+                                          text: 'ID: ',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        TextSpan(text: card['cardMember']['id']),
+                                      ],
+                                    ),
+                                  ),
+                                  Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        const TextSpan(
+                                          text: 'Phonenumber: ',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        TextSpan(
+                                            text: card['user']['phonenumber']),
+                                      ],
+                                    ),
+                                  ),
+                                  Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        const TextSpan(
+                                          text: 'Status: ',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        TextSpan(
+                                          text: card['cardMember']['status'],
+                                          style: TextStyle(
+                                            color: _getStatusColor(
+                                                card['cardMember']['status']),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        const TextSpan(
+                                          text: 'Start date: ',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        TextSpan(
+                                          text: DateFormat('dd/MM/yyyy').format(
+                                            DateTime.parse(
+                                                card['cardMember']['startDate']),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        const TextSpan(
+                                          text: 'End date: ',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        TextSpan(
+                                          text: DateFormat('dd/MM/yyyy').format(
+                                            DateTime.parse(
+                                                card['cardMember']['endDate']),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
                               onTap: () async {
-                                // Điều hướng đến CardDetailScreen và chờ kết quả
                                 final result = await Navigator.pushNamed(
                                   context,
                                   '/carddetail',
                                   arguments: card,
                                 );
-
-                                // Nếu xóa thành công, cập nhật danh sách và hiển thị thông báo
                                 if (result == true) {
                                   setState(() {
-                                    cardList.removeWhere((c) => c["_id"] == card["_id"]);
+                                    cardList.removeWhere((c) =>
+                                        c['cardMember']['id'] ==
+                                        card['cardMember']['id']);
                                     filteredCardList = List.from(cardList);
                                   });
                                   ScaffoldMessenger.of(context).showSnackBar(
